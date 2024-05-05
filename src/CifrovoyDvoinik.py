@@ -72,6 +72,66 @@ def Transit(Tranzit_tourists_count):
     print("Сумма, которую получает регион с налога на добавочную стоиомсть с транзитных туристов: ", summa * 0.2)
     return summa*0.2
 
+def Parom(Tourists):
+    amenity_capacity = {
+        'restaurant': {'capacity': 30, 'avg_bill': lambda: random.randint(1500, 3000)},
+        'cafe': {'capacity': 40, 'avg_bill': lambda: random.randint(300, 1500)},
+        'fast_food': {'capacity': 60, 'avg_bill': lambda: random.randint(200, 1000)},
+        'food_court': {'capacity': 100, 'avg_bill': lambda: random.randint(200, 1000)}
+    }
+    tags = {'amenity': ['restaurant', 'fast_food', 'cafe', 'food_court']}
+
+    # Set the central point (Mamayev Kurgan in this case)
+    center_point = (48.7034462, 44.5241342)
+    gdf = ox.geometries.geometries_from_point(center_point, dist=500, tags=tags)
+
+    # Assign capacity and average bill to each establishment based on its type
+    gdf['capacity'] = gdf['amenity'].apply(
+        lambda x: amenity_capacity.get(x, {'capacity': 0, 'avg_bill': 0})['capacity'])
+    gdf['avg_bill'] = gdf['amenity'].apply(
+        lambda x: amenity_capacity.get(x, {'capacity': 0, 'avg_bill': 0})['avg_bill'])
+
+    # Call the function for each establishment to get the specific average bill value
+    for index, row in gdf.iterrows():
+        gdf.at[index, 'avg_bill'] = row['avg_bill']()
+
+    # Sort establishments by distance from the central point
+    gdf['distance'] = gdf.distance(gdf.geometry.centroid.iloc[0])
+    gdf = gdf.sort_values(by='distance')
+
+    # Extract establishment names and filter out empty values
+    amenity_info = {
+        name: {
+            'capacity': gdf.loc[gdf['name'] == name, 'capacity'].iloc[0],
+            'avg_bill': gdf.loc[gdf['name'] == name, 'avg_bill'].iloc[0]
+        } for name in gdf['name'].tolist() if pd.notna(name)
+    }
+
+    # Convert amenity_info to a dictionary if it's not already one
+    if not isinstance(amenity_info, dict):
+        amenity_info = {name: {'capacity': None, 'avg_bill': None} for name in amenity_info}
+
+    Tranzit_tourists_count = Tourists
+    summa = 0
+    i = 0
+    Percent_going_museum = int(0.4 * Tranzit_tourists_count)
+    Grow_ticket_cost = 1500
+    Children_ticket_cost = 1000
+
+    for i in range(Percent_going_museum):
+        summa += 1 * random.choice((Grow_ticket_cost, Children_ticket_cost))
+
+    Percent_going_eat = int(0.2 * Tranzit_tourists_count)
+
+    for i in range(Percent_going_eat):
+        food = random.choice(list(amenity_info.keys()))
+        food_ = amenity_info[food]
+        capacity_ = food_['capacity']
+        avg_bill_ = food_['avg_bill']
+        summa += 1 * avg_bill_
+
+    return summa*0.2
+
 
 def Group(Tourists):
     # Игнорировать предупреждения
@@ -298,6 +358,8 @@ Group_tourists_percent = int(input()) / 100
 # Туристы учавстующие в соревновательных мероприятиях, будем полагать что им интересна транспортная инфраструктура, а также расположени отеля
 print("Введите процент туристов, участвующих в соревнованиях:")
 Sportsmen_tourists_percent = int(input()) / 100
+print("Введите процент туристов, прибывших на пароме:")
+Parom_tourists_percent = int(input()) / 100
 # 1)Задаем кол-во потоков туристов
 # 2)Прописываем разные сценарии(транзитные, с ночевкой, соревнования и тд.)
 # 3)Пользователь задает разделения процента туристов по разным сценариям
@@ -312,9 +374,11 @@ transit = Transit(Tourists_count * Tranzit_tourists_percent)
 # -> едем к достопремичательности №3 -> ужинаем в ближейшем заведении
 group = Group(Tourists_count * Group_tourists_percent)
 sport = SportGroup(Tourists_count*Sportsmen_tourists_percent)
+parom = Parom(Tourists_count*Parom_tourists_percent)
 print("-------------------------------------------------------------------------------------------")
 print("Выручка полученная региональным бюджетом с налога на добавочную стоимость от групп туристов")
 print("Транзитные туристы(кол-во) ", int(Tourists_count * Tranzit_tourists_percent), " ------------> ", transit)
 print("Организованные группы туристов(кол-во) ", int(Tourists_count * Group_tourists_percent), "-------> ", group)
 print("Туристы учавствующие в соревнованиях(кол-во) ", int(Tourists_count * Sportsmen_tourists_percent), "-------> ", sport)
-print("Общая сумма полученная региональным бюджетом: ", group + transit + sport)
+print("Туристы прибывшие на пароме(кол-во) ", int(Tourists_count * Parom_tourists_percent), "-------> ", parom)
+print("Общая сумма полученная региональным бюджетом: ", group + transit + sport + parom)
