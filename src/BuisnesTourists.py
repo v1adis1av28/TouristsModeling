@@ -14,14 +14,14 @@ amenity_capacity = {
 tags = {'amenity': ['cafe', 'bus_station']}
 building_tags = {'building': 'hotel'}
 hotel_capacity = {
-    'hotel': {'capacity': int(random.randint(200, 1500)), 'avg_bill': lambda: random.randint(800, 5000)}
+    'hotel': {'capacity': int(random.randint(200, 1500)), 'avg_bill': lambda: random.randint(3000, 10000)}
 }
 
 # Задаем центрированный объект в нашем случае это мамаев курган
-center_point = (48.7128912, 44.5132646)
+center_point = (48.7081520, 44.5154185)
 
 # Загружаем данные для кафе и остановок
-gdf = ox.geometries.geometries_from_point(center_point, dist=4000, tags=tags)
+gdf = ox.geometries.geometries_from_point(center_point, dist=5000, tags=tags)
 
 # Присваиваем каждому заведению соответствующую вместимость и средний чек в соответствии с его типом
 for index, row in gdf.iterrows():
@@ -29,7 +29,7 @@ for index, row in gdf.iterrows():
     if amenity in amenity_capacity:
         gdf.at[index, 'capacity'] = amenity_capacity[amenity]['capacity']
         if amenity_capacity[amenity]['avg_bill'] is None:
-            gdf.at[index, 'avg_bill'] = random.randint(300, 1500)
+            gdf.at[index, 'avg_bill'] = random.randint(3000, 15000)
         else:
             gdf.at[index, 'avg_bill'] = amenity_capacity[amenity]['avg_bill']()
 
@@ -71,29 +71,27 @@ for index, row in hotels_gdf.iterrows():
 
 rand_hotel = int(random.randint(0,len(hotels)))
 rand_cafe_d1 = int(random.randint(0,len(cafes)))
-print("Введите кол-во туристов спортсменов: ")
+print("Введите кол-во деловых туристов: ")
 Tourists = int(input())
 summa_hotel = 0
 summa_food = 0
 Comanda_count = 15
-Count_of_comands = int(Tourists/15)
-for j in range(2):
-    for i in range(Count_of_comands):
+for i in range(Tourists):
+    rand_hotel = int(random.randint(0, len(hotels)))
+    hotel_ = hotels[rand_hotel]
+    capacity_ = hotel_['capacity']
+    avg_bill_ = hotel_['avg_bill']
+    if(capacity_ > 15):
+        summa_hotel += Comanda_count * avg_bill_
+    else:
         rand_hotel = int(random.randint(0, len(hotels)))
         hotel_ = hotels[rand_hotel]
         capacity_ = hotel_['capacity']
         avg_bill_ = hotel_['avg_bill']
-        if (capacity_ > 15):
-            summa_hotel += Comanda_count * avg_bill_
-        else:
-            rand_hotel = int(random.randint(0, len(hotels)))
-            hotel_ = hotels[rand_hotel]
-            capacity_ = hotel_['capacity']
-            avg_bill_ = hotel_['avg_bill']
-            summa_hotel += Comanda_count * avg_bill_
+        summa_hotel += Comanda_count*avg_bill_
 
-for i in range(3):
-    for i in range(Count_of_comands):
+for i in range(2):
+    for i in range(Tourists):
         rand_cafe_d1 = int(random.randint(0, len(cafes)))
         cafe = cafes[rand_cafe_d1]
         capacity_ = cafe['capacity']
