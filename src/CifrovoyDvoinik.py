@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore")
 def GetCenterPoint():
     places = ['mamaev', 'sarepta', 'panorama', 'ppb', 'nabka', 'lisaya gora', 'dom pavlova']
     place = random.choice(places)
-    print(place)
+    #print(place)
     if place == 'mamaev':
         center_point = (48.7423657, 44.5371442)
     elif (place == 'sarepta'):
@@ -28,7 +28,6 @@ def GetCenterPoint():
         center_point = (48.7154184, 44.5327745)
     elif place == 'ppb':
         center_point = (48.7082590, 44.5150334)
-
     elif place == 'nabka':
         center_point = (48.7029277, 44.5214930)
     elif place == 'lisaya gora':
@@ -49,14 +48,12 @@ def Transit(Tranzit_tourists_count):
         'hotel': {'capacity': int(random.randint(200, 1500)), 'avg_bill': lambda: random.randint(800, 5000)}
     }
 
-
-
     def GetRandStayArea():
         place = [(48.8799494, 44.5898155), (48.7989878, 44.4570284), (48.7015364, 44.3946255), (48.4479420, 44.5143119)]
         return random.choice(place)
 
     def Places(center_point, tags):
-        gdf = ox.geometries.geometries_from_point(center_point, dist=1800, tags=tags)
+        gdf = ox.geometries.geometries_from_point(center_point, dist=3000, tags=tags)
 
         # Присвоение каждому заведению соответствующей вместимости и среднего чека в соответствии с его типом
         gdf['capacity'] = gdf['amenity'].apply(
@@ -125,40 +122,34 @@ def Transit(Tranzit_tourists_count):
 
     remaining_tourists_half = Tranzit_tourists_count / 2
 
-    # Обработка информации об отелях
-    hotels_info = Places(GetRandStayArea(), building_tags)
-    hotels_sum = 0
+    hotels_gdf = ox.geometries.geometries_from_point(GetCenterPoint(), dist=4000, tags=building_tags)
 
-    # Первая точка проживания
-    first_location = GetCenterPoint()
-    first_location_info = Places(first_location, tags)
-    for name, info in first_location_info.items():
-        capacity = info['capacity']
-        avg_bill = info['avg_bill']
-        # Если количество туристов больше, чем вместимость, добавляем к сумме стоимость всех посетителей в месте проживания
-        if remaining_tourists_half > capacity:
-            summa += capacity * avg_bill
-            remaining_tourists_half -= capacity
-        # Иначе добавляем к сумме стоимость только указанного количества туристов и завершаем цикл
-        else:
-            summa += remaining_tourists_half * avg_bill
-            break
+    # Присваиваем каждому отелю соответствующую вместимость и средний чек
+    for index, row in hotels_gdf.iterrows():
+        building_type = row['building']
+        if building_type in hotel_capacity:
+            hotels_gdf.at[index, 'capacity'] = hotel_capacity[building_type]['capacity']
+            hotels_gdf.at[index, 'avg_bill'] = hotel_capacity[building_type]['avg_bill']()
 
-    # Распределение оставшейся половины туристов между отелями
-    for name, info in hotels_info.items():
-        capacity = info['capacity']
-        avg_bill = info['avg_bill']
-        # Если еще остались туристы для распределения
-        while remaining_tourists_half > 0:
-            # Если количество туристов больше, чем вместимость отеля, добавляем в отель столько туристов, сколько туда влезет
-            if remaining_tourists_half > capacity:
-                summa += capacity * avg_bill
-                remaining_tourists_half -= capacity
-            # Иначе добавляем в отель всех оставшихся туристов и заканчиваем распределение
-            else:
-                summa += remaining_tourists_half * avg_bill
-                remaining_tourists_half = 0
-                break
+    # Сортируем отели по удаленности от центральной точки
+    hotels_gdf['distance'] = hotels_gdf.distance(hotels_gdf.geometry.centroid.iloc[0])
+    hotels_gdf = hotels_gdf.sort_values(by='distance')
+
+    # Извлекаем имена заведений и фильтруем пустые значения
+    hotels = []
+
+    for index, row in hotels_gdf.iterrows():
+        name = row['name']
+        if pd.notna(name):
+            hotels.append({'name': name, 'capacity': row['capacity'], 'avg_bill': row['avg_bill']})
+
+    Tourists = remaining_tourists_half
+    for i in range(int(Tourists)):
+        rand_hotel = int(random.randint(0, len(hotels)-1))
+        hotel_ = hotels[rand_hotel]
+        capacity_ = hotel_['capacity']
+        avg_bill_ = hotel_['avg_bill']
+        summa +=  avg_bill_
     return summa*0.2
 
 def Parom(Tourists):
@@ -569,7 +560,7 @@ parom = Parom(Tourists_count*Parom_tourists_percent)
 buisnes = BuisnesTourists(Tourists_count*Buisnes_tourists_percent)
 print("-------------------------------------------------------------------------------------------")
 print("Выручка полученная региональным бюджетом с налога на добавочную стоимость от групп туристов")
-print("Транзитные туристы(кол-во) ", int(Tourists_count * Tranzit_tourists_percent), " ------------> ", transit)
+#print("Транзитные туристы(кол-во) ", int(Tourists_count * Tranzit_tourists_percent), " ------------> ", transit)
 print("Организованные группы туристов(кол-во) ", int(Tourists_count * Group_tourists_percent), "-------> ", group)
 print("Туристы учавствующие в соревнованиях(кол-во) ", int(Tourists_count * Sportsmen_tourists_percent), "-------> ", sport)
 print("Туристы прибывшие на пароме(кол-во) ", int(Tourists_count * Parom_tourists_percent), "-------> ", parom)
@@ -587,7 +578,7 @@ explode = (0.1, 0, 0, 0, 0)  # Выделение сегмента
 plt.figure(figsize=(8, 8))
 plt.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%', shadow=True, startangle=140)
 plt.title('Выручка от разных категорий туристов')
-
+#Починить транизитные туристы
 # Отображение легенды
 plt.legend(loc='upper right')
 
